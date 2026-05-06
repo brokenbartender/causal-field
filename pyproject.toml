@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "causal-field"
+version = "1.0.0"
+description = "Gaussian resource-contention fields for multi-agent coordination"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+keywords = [
+    "multi-agent", "concurrency", "gaussian", "resource-management",
+    "soft-lock", "contention", "ai", "agentic-ai", "3dgs",
+    "interference-field", "probabilistic", "coordination"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+embed = ["ollama>=0.1.0"]
+viz = ["matplotlib>=3.7"]
+all = ["ollama>=0.1.0", "matplotlib>=3.7"]
+
+[project.urls]
+Homepage = "https://lexipro.online"
+Repository = "https://github.com/brokenbartender/causal-field"
+Issues = "https://github.com/brokenbartender/causal-field/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["causal_field*"]
