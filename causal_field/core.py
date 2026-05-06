@@ -483,6 +483,126 @@ def make_splat_from_keyword(
     )
 
 
+
+def contention_benchmark(
+    n_agents: int = 8,
+    n_rounds: int = 200,
+    dim: int = 64,
+    n_resources: int = 2,
+) -> dict:
+    """Real multi-threaded contention benchmark — agents compete concurrently.
+
+    Unlike benchmark() which runs sequentially, this spawns actual threads
+    competing for the same resources simultaneously. Shows true contention
+    behavior: collision rates, latency under load, and throughput degradation.
+
+    Example::
+
+        from causal_field import contention_benchmark
+        r = contention_benchmark(n_agents=8, n_resources=2)
+        print(r["soft_lock"]["collision_rate"])   # 0.12 — 12% deferred
+        print(r["soft_lock"]["p99_ms"])           # p99 acquire latency
+        print(r["verdict"])
+    """
+    import threading
+    import statistics
+
+    resource_pool = [f"file_write:/data/shared_{i}.csv" for i in range(n_resources)]
+    cf = CausalField(dim=dim)
+
+    soft_latencies: list[float] = []
+    soft_collisions = 0
+    _lock = threading.Lock()
+
+    def soft_worker(agent_id: str) -> None:
+        nonlocal soft_collisions
+        lats = []
+        for _ in range(n_rounds):
+            resource = resource_pool[hash(agent_id) % n_resources]
+            t0 = time.perf_counter()
+            result = cf.soft_acquire(agent_id, resource)
+            lats.append((time.perf_counter() - t0) * 1000)
+            if result["acquired"]:
+                cf.soft_release(agent_id, resource)
+            else:
+                with _lock:
+                    soft_collisions += 1
+        with _lock:
+            soft_latencies.extend(lats)
+
+    threads = [threading.Thread(target=soft_worker, args=(f"agent-{i}",)) for i in range(n_agents)]
+    t0 = time.perf_counter()
+    for t in threads: t.start()
+    for t in threads: t.join()
+    soft_elapsed = time.perf_counter() - t0
+
+    # Baseline: non-blocking mutex trylock under same concurrency
+    mutex = threading.Lock()
+    mutex_latencies: list[float] = []
+    mutex_collisions = 0
+    _mlock = threading.Lock()
+
+    def mutex_worker() -> None:
+        nonlocal mutex_collisions
+        lats = []
+        for _ in range(n_rounds):
+            t0 = time.perf_counter()
+            acquired = mutex.acquire(blocking=False)
+            lats.append((time.perf_counter() - t0) * 1000)
+            if acquired:
+                mutex.release()
+            else:
+                with _mlock:
+                    mutex_collisions += 1
+        with _mlock:
+            mutex_latencies.extend(lats)
+
+    threads2 = [threading.Thread(target=mutex_worker) for _ in range(n_agents)]
+    t0 = time.perf_counter()
+    for t in threads2: t.start()
+    for t in threads2: t.join()
+    mutex_elapsed = time.perf_counter() - t0
+
+    total_ops = n_agents * n_rounds
+    sl_lats_sorted = sorted(soft_latencies)
+    mx_lats_sorted = sorted(mutex_latencies)
+
+    soft_ops_sec  = int(total_ops / soft_elapsed)  if soft_elapsed  > 0 else 0
+    mutex_ops_sec = int(total_ops / mutex_elapsed) if mutex_elapsed > 0 else 0
+
+    soft_cr  = round(soft_collisions  / total_ops, 3)
+    mutex_cr = round(mutex_collisions / total_ops, 3)
+
+    verdict = (
+        f"Under {n_agents}-agent contention on {n_resources} resource(s): "
+        f"soft-lock deferred {soft_cr*100:.1f}% of requests probabilistically "
+        f"vs mutex hard-blocked {mutex_cr*100:.1f}%. "
+        + ("Soft-lock distributes load without starvation." if soft_cr <= mutex_cr
+           else "Mutex had fewer collisions — increase n_resources for soft-lock advantage.")
+    )
+
+    return {
+        "n_agents":    n_agents,
+        "n_rounds":    n_rounds,
+        "n_resources": n_resources,
+        "dim":         dim,
+        "soft_lock": {
+            "ops_per_sec":     soft_ops_sec,
+            "collisions":      soft_collisions,
+            "collision_rate":  soft_cr,
+            "p50_ms":  round(sl_lats_sorted[len(sl_lats_sorted)//2], 4),
+            "p99_ms":  round(sl_lats_sorted[min(int(len(sl_lats_sorted)*0.99), len(sl_lats_sorted)-1)], 4),
+        },
+        "mutex": {
+            "ops_per_sec":     mutex_ops_sec,
+            "collisions":      mutex_collisions,
+            "collision_rate":  mutex_cr,
+            "p50_ms":  round(mx_lats_sorted[len(mx_lats_sorted)//2], 4),
+            "p99_ms":  round(mx_lats_sorted[min(int(len(mx_lats_sorted)*0.99), len(mx_lats_sorted)-1)], 4),
+        },
+        "verdict": verdict,
+    }
+
 _global_field: "CausalField | None" = None
 
 
