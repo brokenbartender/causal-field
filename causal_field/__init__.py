@@ -24,6 +24,7 @@ from .core import (
     SOFT_LOCK_THRESHOLDS,
     EMBED_DIM,
     HASH_FALLBACK_DIM,
+    contention_benchmark,
 )
 
 __all__ = [
@@ -38,6 +39,7 @@ __all__ = [
     "score_tools_gaussian",
     "retract_agent_splats",
     "SOFT_LOCK_THRESHOLDS",
+    "contention_benchmark",
     "EMBED_DIM",
     "HASH_FALLBACK_DIM",
 ]
