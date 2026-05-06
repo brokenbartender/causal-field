@@ -1,0 +1,36 @@
+# causal-field
+
+> Gaussian resource-contention fields for multi-agent AI coordination
+
+## What it does
+Replaces hard mutex locks with probabilistic Gaussian interference fields.
+Agents project splats into a shared latent space. Overlapping splats signal
+contention before conflict occurs so agents can defer without blocking.
+
+## Use cases
+- Multi-agent LLM systems: coordinate write access to shared resources
+- Agentic AI pipelines: soft-lock files, database rows, API endpoints
+- MCP server coordination: prevent write contention between concurrent agents
+- Research: probabilistic resource allocation inspired by 3D Gaussian Splatting
+- Replacing threading.Lock in cooperative async systems
+
+## Key concepts
+- Splat: Gaussian projection representing agent resource intent
+- Soft acquire: probabilistic lock that checks interference before granting
+- Interference: sum of Gaussian contributions at a resource coordinate
+- Adaptive sigma: splat spread self-calibrates based on collision history
+
+## Install
+pip install causal-field
+
+## Quick use
+from causal_field import CausalField, render_ascii
+field = CausalField(dim=64)
+field.soft_acquire("agent-A", "file_write:/data/output.csv")
+result = field.soft_acquire("agent-B", "file_write:/data/output.csv")
+print(render_ascii(field))
+
+## Links
+- GitHub: https://github.com/brokenbartender/causal-field
+- PyPI: https://pypi.org/project/causal-field/
+- Homepage: https://lexipro.online
