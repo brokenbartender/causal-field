@@ -12,6 +12,7 @@ pip install causal-field
 ```
 
 [![PyPI version](https://badge.fury.io/py/causal-field.svg)](https://pypi.org/project/causal-field/)
+[![Downloads](https://img.shields.io/pypi/dm/causal-field.svg)](https://pypi.org/project/causal-field/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/brokenbartender/causal-field/actions/workflows/ci.yml/badge.svg)](https://github.com/brokenbartender/causal-field/actions)
