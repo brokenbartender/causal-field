@@ -215,3 +215,55 @@ file writes — `CausalField` is advisory, operating one layer earlier for *rout
 MIT — see [LICENSE](LICENSE).
 
 Built by [Broken Arrow Entertainment LLC](https://lexipro.online) · Sovereign Intelligence Systems Group
+
+---
+
+## OS Integration — MSCL CAP Layer
+
+`causal-field` wires into the Minimal Stable Control Loop (MSCL) as the first
+contention check before any write-type tool executes. This is the integration
+pattern used in the [LexiPro Sovereign OS](https://lexipro.online):
+
+```python
+# mscl.py — _check_contention() CAP layer (v22.8)
+from causal_field import get_global_field, _resource_to_mu, _get_threshold
+
+_WRITE_KWS = ("write", "edit", "save", "delete", "create", "append",
+              "db_write", "insert", "update", "drop")
+
+def check_write_contention(resource_mu: str, directorate: str) -> dict:
+    if any(kw in resource_mu.lower() for kw in _WRITE_KWS):
+        cf           = get_global_field()
+        mu           = _resource_to_mu(resource_mu, cf.dim)
+        interference = cf.intensity_at(mu)        # read-only — no splat projection
+        threshold    = _get_threshold(resource_mu)
+
+        if interference > threshold:
+            return {
+                "decision": "DENY",
+                "reason": (
+                    f"CAUSAL_FIELD_BLOCKED: {resource_mu} "
+                    f"interference={interference:.3f} (>{threshold}). "
+                    f"Acquire hard mutex first."
+                ),
+            }
+    return {"decision": "ALLOW"}
+```
+
+**Key design:** the auth check reads the field via `intensity_at(mu)` — it does NOT
+call `soft_acquire()`. This avoids phantom splats during auth checks. Actual splat
+projection only happens when the agent explicitly calls `soft_acquire()` at execution
+time.
+
+**Full authority stack:**
+
+```
+CausalField intensity_at()          ← instant snapshot, write-type resources
+  → NeuralBus WRITE_CONTENTION      ← 60-second pheromone sliding window
+      → MetaGovernor seniority      ← deferred-enough agents get priority boost
+          → hard mutex acquire      ← sole serialization gate for actual writes
+```
+
+**Adaptive sigma closes the loop:** after each write, call
+`field.adjust_sigma(agent_id, resource, outcome)` so the field self-calibrates.
+Collisions shrink sigma (splat was too wide); false positives grow it.
