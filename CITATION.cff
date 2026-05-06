@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+title: causal-field
+abstract: >
+  Gaussian resource-contention fields for multi-agent AI coordination.
+  Replaces hard mutex locks with probabilistic interference fields so agents
+  sense contention before conflict occurs. Supports adaptive sigma, ASCII
+  heatmap rendering, matplotlib visualization, and benchmarking.
+  Inspired by 3D Gaussian Splatting (3DGS).
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - family-names: McKenzie
+    given-names: Cody
+    affiliation: Broken Arrow Entertainment LLC
+repository-code: https://github.com/brokenbartender/causal-field
+url: https://lexipro.online
+license: MIT
+version: 1.0.0
+keywords:
+  - multi-agent
+  - gaussian
+  - resource-contention
+  - soft-lock
+  - probabilistic
+  - coordination
+  - llm
+  - agentic-ai
+  - concurrency
+  - distributed-systems
+  - 3dgs
