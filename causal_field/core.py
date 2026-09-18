@@ -800,20 +800,36 @@ def benchmark(
 
     soft_ops_sec  = soft_ops  / soft_elapsed  if soft_elapsed  > 0 else float("inf")
     mutex_ops_sec = mutex_ops / mutex_elapsed if mutex_elapsed > 0 else float("inf")
-    speedup       = round(soft_ops_sec / mutex_ops_sec, 2) if mutex_ops_sec > 0 else float("inf")
+    speedup = (
+        round(soft_ops_sec / mutex_ops_sec, 2)
+        if mutex_ops_sec > 0 and math.isfinite(soft_ops_sec) and math.isfinite(mutex_ops_sec)
+        else float("inf")
+    )
+
+    # -1 signals "too fast to time at this scale" (sub-timer-resolution → inf ops/sec).
+    def _safe_int(x: float) -> int:
+        return int(x) if math.isfinite(x) else -1
+
+    if not math.isfinite(speedup) or speedup <= 0:
+        # Timer resolution too coarse (usually tiny n_rounds) — don't crash on 1/0.
+        note = (
+            f"Benchmark inconclusive at this scale ({n_agents} agents, {n_rounds} rounds, "
+            f"dim={dim}) — increase n_rounds for a stable measurement."
+        )
+    elif speedup >= 1.0:
+        note = (
+            f"Soft-lock is {speedup}x faster than threading.Lock "
+            f"({n_agents} agents, {n_rounds} rounds, dim={dim})"
+        )
+    else:
+        note = f"threading.Lock is {round(1 / speedup, 2)}x faster (soft-lock overhead at dim={dim})"
 
     return {
         "n_agents":              n_agents,
         "n_rounds":              n_rounds,
-        "soft_lock_ops_per_sec": int(soft_ops_sec),
-        "mutex_ops_per_sec":     int(mutex_ops_sec),
+        "soft_lock_ops_per_sec": _safe_int(soft_ops_sec),
+        "mutex_ops_per_sec":     _safe_int(mutex_ops_sec),
         "soft_lock_wins":        soft_ops_sec > mutex_ops_sec,
         "speedup":               speedup,
-        "note": (
-            f"Soft-lock is {speedup}x faster than threading.Lock "
-            f"({n_agents} agents, {n_rounds} rounds, dim={dim})"
-            if speedup >= 1.0
-            else f"threading.Lock is {round(1/speedup, 2)}x faster "
-                 f"(soft-lock overhead at dim={dim})"
-        ),
+        "note":                  note,
     }
