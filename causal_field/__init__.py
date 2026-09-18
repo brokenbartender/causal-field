@@ -44,4 +44,4 @@ __all__ = [
     "HASH_FALLBACK_DIM",
 ]
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
